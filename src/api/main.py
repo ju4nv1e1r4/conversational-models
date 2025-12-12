@@ -1,40 +1,47 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from src.services.llm_service import LLMService
-# TODO: from src.services.redis_service import RedisService (next step)
+from src.services.redis_service import RedisService
 
 app = FastAPI(title="Compound AI Orchestrator")
+
 llm_service = LLMService()
+redis_service = RedisService()
 
 class ChatRequest(BaseModel):
     message: str
-    user_id: str = "default_user"
+    user_id: str = "default_user" # NOTE: to separate sessions
 
 @app.get("/health")
 def health():
-    return {"status": "running", "model": llm_service.model_name}
+    return {"status": "running"}
 
 @app.post("/chat")
 def chat(payload: ChatRequest):
-    # TODO: Check redis cace
-    # TODO: Enrich with graphrag (FalkorDB)
-    # TODO: Classify intention (KServe/ONNX)
+    user_msg = payload.message
+    user_id = payload.user_id
 
     try:
-        response_text = llm_service.generate_response(payload.message)
-        
+        history = redis_service.get_context_window(user_id)
+
+        ai_response = llm_service.generate_response(prompt=user_msg, history=history)
+
+        redis_service.add_message(user_id, "user", user_msg)
+        redis_service.add_message(user_id, "model", ai_response)
+
         return {
-            "response": response_text,
+            "response": ai_response,
             "metadata": {
-                "source": "llm_direct", # It will be changed for cache or rag soon
-                "model": llm_service.model_name
+                "history_len": len(history),
+                "user_id": user_id
             }
         }
-    except Exception as request_error:
-        raise HTTPException(status_code=500, detail=str(request_error))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     except Exception as undefined_error:
         return {
-            "response": "Desculpe, tive um problema ao processar sua solicitação." or response_text,
+            "response": "Desculpe, tive um problema ao processar sua solicitação." or ai_response,
             "metadata": {
                 "source": "llm_direct",
                 "model": llm_service.model_name,

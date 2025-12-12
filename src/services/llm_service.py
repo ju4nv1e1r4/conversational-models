@@ -11,31 +11,42 @@ class LLMService:
         self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
         self.model_name = settings.GEMINI_MODEL
 
-    def generate_response(self, prompt: str, system_instruction: str = None) -> str:
+    def generate_response(self, prompt: str, history: list = None) -> str:
         """
-        Gera uma resposta simples (não-streamada para este endpoint REST simples).
+        Gera resposta considerando o histórico.
+        history: Lista de dicts [{'role': 'user', 'content': '...'}, ...]
         """
+        
+        contents = []
 
-        if not system_instruction:
-            system_instruction = "Você é um assistente útil e direto."
+        if history:
+            for msg in history:
+                contents.append(
+                    types.Content(
+                        role=msg["role"],
+                        parts=[types.Part.from_text(text=msg["content"])]
+                    )
+                )
+
+        contents.append(
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=prompt)]
+            )
+        )
 
         config = types.GenerateContentConfig(
-            system_instruction=[types.Part.from_text(text=system_instruction)],
+            system_instruction=[types.Part.from_text(text="Você é um assistente útil.")],
             temperature=0.7
         )
 
         try:
             response = self.client.models.generate_content(
                 model=self.model_name,
-                contents=[
-                    types.Content(
-                        role="user",
-                        parts=[types.Part.from_text(text=prompt)]
-                    )
-                ],
+                contents=contents,
                 config=config
             )
             return response.text
         except Exception as e:
             print(f"Erro na chamada do LLM: {e}")
-            return "Desculpe, tive um problema ao processar sua solicitação."
+            return "Desculpe, tive um problema técnico."

@@ -8,6 +8,7 @@ from tokenizers import Tokenizer
 
 from src.utils.storage import LocalStorage
 from src.utils.config import settings
+from src.utils.telemetry import instrument
 
 logger = logging.getLogger("nlu_engine")
 
@@ -42,6 +43,7 @@ class NLUEngine:
 
         os.remove(zip_local_path)
 
+    @instrument(name="load_model")
     def load(self):
         self._load_artifacts()
 
@@ -56,6 +58,7 @@ class NLUEngine:
         
         logger.info(f"Modelo {self.artifact_name} carregado na memória.")
 
+    @instrument(name="model_generic_inference")
     def predict(self, text: str, labels: list = None):
         """
         Exemplo genérico de inferência.

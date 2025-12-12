@@ -1,7 +1,9 @@
 import os
 from google import genai
 from google.genai import types
+
 from src.utils.config import settings
+from src.utils.telemetry import instrument
 
 class LLMService:
     def __init__(self):
@@ -11,6 +13,7 @@ class LLMService:
         self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
         self.model_name = settings.GEMINI_MODEL
 
+    @instrument(name="llm_generate")
     def generate_response(self, prompt: str, history: list = None) -> str:
         """
         Gera resposta considerando o histórico.

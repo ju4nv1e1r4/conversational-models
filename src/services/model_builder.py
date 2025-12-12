@@ -6,6 +6,7 @@ from huggingface_hub import snapshot_download
 
 from src.utils.storage import LocalStorage
 from src.utils.config import settings
+from src.utils.telemetry import instrument
 
 logger = logging.getLogger("builder")
 logging.basicConfig(level=logging.INFO)
@@ -24,6 +25,7 @@ class ModelBuilder:
         self.artifact_name = artifact_name
         self.storage = LocalStorage(base_path=settings.ARTIFACTS_PATH)
 
+    instrument(name="download_model_from_hf")
     def run(self):
         try:
             logger.info(f"Baixando snapshot de {self.model_id}...")

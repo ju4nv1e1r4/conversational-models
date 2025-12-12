@@ -1,7 +1,9 @@
 import numpy as np
 import json
 import logging
+
 from src.services.nlu_engine import NLUEngine
+from src.utils.telemetry import instrument
 
 logger = logging.getLogger("intent_service")
 
@@ -47,6 +49,7 @@ class IntentService(NLUEngine):
             logger.error(f"Erro ao ler config.json: {e}")
             return 2
 
+    @instrument(name="nlu_predict_intent")
     def predict_intent(self, text: str, candidate_labels: list[str]):
         """
         Realiza Zero-Shot Classification de forma dinâmica.

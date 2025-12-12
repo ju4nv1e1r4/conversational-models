@@ -12,39 +12,44 @@ from src.utils.config import settings
 logger = logging.getLogger("nlu_engine")
 
 class NLUEngine:
-    def __init__(self, artifact_name: str, model_dir: str = "/app/models/served"):
-        base_path = model_dir if model_dir else settings.ARTIFACTS_PATH
-        self.storage = LocalStorage(base_path=base_path)
+    def __init__(self, artifact_name: str, runtime_dir: str = "/app/models/served"):
+        """
+        artifact_name: Nome do arquivo .zip (ex: intent_classifier.zip)
+        runtime_dir: Onde o modelo será descompactado para rodar (Efêmero)
+        """
         self.artifact_name = artifact_name
-        self.local_model_path = os.path.join(model_dir, artifact_name.replace(".zip", ""))
+        self.storage = LocalStorage(base_path=settings.ARTIFACTS_PATH)
+        self.runtime_dir = runtime_dir
+        self.local_model_path = os.path.join(self.runtime_dir, artifact_name.replace(".zip", ""))
         self.session = None
         self.tokenizer = None
 
     def _load_artifacts(self):
-        """Baixa (copia) do storage local e descompacta se necessário."""
+        """Baixa do storage e descompacta no runtime dir."""
         if os.path.exists(os.path.join(self.local_model_path, "model.onnx")):
-            return
+            return 
 
-        logger.info(f"Instalando modelo {self.artifact_name}...")
+        logger.info(f"Instalando modelo {self.artifact_name} em {self.local_model_path}...")
+
         zip_local_path = f"/tmp/{self.artifact_name}"
 
         self.storage.download(self.artifact_name, zip_local_path)
-
+        
         os.makedirs(self.local_model_path, exist_ok=True)
+
         with zipfile.ZipFile(zip_local_path, 'r') as zip_ref:
             zip_ref.extractall(self.local_model_path)
-        
+
         os.remove(zip_local_path)
 
     def load(self):
-        """Carrega ONNX Session e Tokenizer na memória RAM."""
         self._load_artifacts()
 
         tok_path = os.path.join(self.local_model_path, "tokenizer.json")
         self.tokenizer = Tokenizer.from_file(tok_path)
 
         sess_options = ort.SessionOptions()
-        sess_options.intra_op_num_threads = 1 # NOTE: to avoid excessive concurrency on cpus
+        sess_options.intra_op_num_threads = 1 
         
         onnx_path = os.path.join(self.local_model_path, "model.onnx")
         self.session = ort.InferenceSession(onnx_path, sess_options)

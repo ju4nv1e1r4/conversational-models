@@ -1,60 +1,88 @@
 import numpy as np
+import json
+import logging
 from src.services.nlu_engine import NLUEngine
+
+logger = logging.getLogger("intent_service")
 
 class IntentService(NLUEngine):
     def __init__(self):
         super().__init__(artifact_name="intent_classifier.zip")
-        self.labels_map = {}
+        self.entailment_id = None
+
+    def _setup_tokenizer_config(self):
+        """
+        Configura padding e truncation explícitos para o tokenizer raw.
+        Necessário para processamento em batch.
+        """
+        self.tokenizer.enable_truncation(max_length=512)
+
+        pad_id = 0
+        if self.tokenizer.token_to_id("[PAD]"):
+            pad_id = self.tokenizer.token_to_id("[PAD]")
+        elif self.tokenizer.token_to_id("<pad>"):
+            pad_id = self.tokenizer.token_to_id("<pad>")
+            
+        self.tokenizer.enable_padding(pad_id=pad_id, pad_token="[PAD]")
 
     def _get_entailment_id(self):
-        """Descobre qual ID corresponde a 'entailment' no config do modelo."""
-        if not self.session:
-            self.load()
-            
-        config_path = f"{self.local_model_path}/config.json"
-        import json
-        with open(config_path, 'r') as f:
-            config = json.load(f)
+        """Descobre dinamicamente qual ID corresponde a 'entailment'."""
+        if self.entailment_id is not None:
+            return self.entailment_id
 
-        id2label = config.get("id2label", {})
-        for id_str, label in id2label.items():
-            if label.lower() == "entailment":
-                return int(id_str)
-        return 2 # deberta default fallback
+        config_path = f"{self.local_model_path}/config.json"
+        try:
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+
+            id2label = config.get("id2label", {})
+            for id_str, label in id2label.items():
+                if label.lower() == "entailment":
+                    self.entailment_id = int(id_str)
+                    return self.entailment_id
+
+            self.entailment_id = 2 
+            return 2
+        except Exception as e:
+            logger.error(f"Erro ao ler config.json: {e}")
+            return 2
 
     def predict_intent(self, text: str, candidate_labels: list[str]):
         """
-        Realiza Zero-Shot Classification.
-        Retorna: (melhor_label, score)
+        Realiza Zero-Shot Classification de forma dinâmica.
+        Verifica quais inputs o modelo aceita antes de enviar.
         """
         if not self.session:
             self.load()
+            self._setup_tokenizer_config()
 
         entailment_id = self._get_entailment_id()
-        scores = []
+        hypothesis_template = "This text is about {}."
 
-        hypothesis_template = "This text is about {}." 
+        text_pairs = [(text, hypothesis_template.format(label)) for label in candidate_labels]
 
-        for label in candidate_labels:
-            hypothesis = hypothesis_template.format(label)
+        encodings = self.tokenizer.encode_batch(text_pairs)
 
-            inputs = self.tokenizer(text, hypothesis, return_tensors="np", padding=True, truncation=True)
-            
-            onnx_inputs = {
-                "input_ids": inputs["input_ids"],
-                "attention_mask": inputs["attention_mask"]
-            }
-            if "token_type_ids" in inputs:
-                onnx_inputs["token_type_ids"] = inputs["token_type_ids"]
+        input_ids = np.array([e.ids for e in encodings], dtype=np.int64)
+        attention_mask = np.array([e.attention_mask for e in encodings], dtype=np.int64)
 
-            logits = self.session.run(None, onnx_inputs)[0][0]
+        model_input_names = [i.name for i in self.session.get_inputs()]
+        
+        onnx_inputs = {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask
+        }
 
-            entailment_score = logits[entailment_id]
-            scores.append(entailment_score)
+        if "token_type_ids" in model_input_names:
+            token_type_ids = np.array([e.type_ids for e in encodings], dtype=np.int64)
+            onnx_inputs["token_type_ids"] = token_type_ids
 
-        scores_np = np.array(scores)
-        exp_scores = np.exp(scores_np - np.max(scores_np))
-        probs = exp_scores / exp_scores.sum()
+        logits = self.session.run(None, onnx_inputs)[0]
+        
+        entailment_logits = logits[:, entailment_id]
+
+        exp_logits = np.exp(entailment_logits - np.max(entailment_logits))
+        probs = exp_logits / exp_logits.sum()
 
         best_idx = np.argmax(probs)
         return candidate_labels[best_idx], float(probs[best_idx])

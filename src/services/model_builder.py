@@ -21,7 +21,7 @@ class ModelBuilder:
         self.model_id = model_id
         self.artifact_name = artifact_name
 
-        self.storage = LocalStorage(base_path="/app/data/artifacts")
+        self.storage = LocalStorage(base_path="../data/artifacts")
 
     def run(self):
         try:

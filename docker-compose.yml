@@ -1,0 +1,62 @@
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    container_name: poc_graph_db
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/falkordb:/data
+    networks:
+      - ai_net
+
+  redis_cache:
+    image: redis:alpine
+    container_name: poc_app_cache
+    ports:
+      - "6380:6379"
+    volumes:
+      - ./data/redis_cache:/data
+    networks:
+      - ai_net
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: poc_orchestrator
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./src:/app/src
+    env_file:
+      - .env
+    environment:
+      - REDIS_CACHE_HOST=redis_cache
+      - FALKORDB_HOST=falkordb
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8002 --reload
+    depends_on:
+      - falkordb
+      - redis_cache
+    networks:
+      - ai_net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: poc_ui
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./src:/app/src
+    environment:
+      - API_URL=http://app:8002
+    command: streamlit run src/ui/app.py --server.address=0.0.0.0
+    depends_on:
+      - app
+    networks:
+      - ai_net
+
+networks:
+  ai_net:
+    driver: bridge

@@ -28,6 +28,8 @@ services:
       - "8002:8002"
     volumes:
       - ./src:/app/src
+      - ./models:/app/models
+      - ./data:/app/data
     env_file:
       - .env
     environment:

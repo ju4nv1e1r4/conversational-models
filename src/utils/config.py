@@ -12,6 +12,9 @@ class Settings:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     GEMINI_MODEL = "gemini-2.0-flash"
     
+    # Service - NLP Models
+    ARTIFACTS_PATH = str(ARTIFACTS_DIR)
+
     # Infra - Cache (Redis)
     REDIS_CACHE_HOST = os.getenv("REDIS_CACHE_HOST", "redis_cache")
     REDIS_CACHE_PORT = int(os.getenv("REDIS_CACHE_PORT", 6379))

@@ -5,13 +5,16 @@ import logging
 import numpy as np
 import onnxruntime as ort
 from tokenizers import Tokenizer
+
 from src.utils.storage import LocalStorage
+from src.utils.config import settings
 
 logger = logging.getLogger("nlu_engine")
 
 class NLUEngine:
     def __init__(self, artifact_name: str, model_dir: str = "/app/models/served"):
-        self.storage = LocalStorage(base_path="/app/data/artifacts")
+        base_path = model_dir if model_dir else settings.ARTIFACTS_PATH
+        self.storage = LocalStorage(base_path=base_path)
         self.artifact_name = artifact_name
         self.local_model_path = os.path.join(model_dir, artifact_name.replace(".zip", ""))
         self.session = None

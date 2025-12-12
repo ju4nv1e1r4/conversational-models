@@ -3,7 +3,9 @@ import shutil
 import logging
 from pathlib import Path
 from huggingface_hub import snapshot_download
+
 from src.utils.storage import LocalStorage
+from src.utils.config import settings
 
 logger = logging.getLogger("builder")
 logging.basicConfig(level=logging.INFO)
@@ -20,8 +22,7 @@ class ModelBuilder:
     def __init__(self, model_id: str, artifact_name: str):
         self.model_id = model_id
         self.artifact_name = artifact_name
-
-        self.storage = LocalStorage(base_path="../data/artifacts")
+        self.storage = LocalStorage(base_path=settings.ARTIFACTS_PATH)
 
     def run(self):
         try:

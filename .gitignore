@@ -11,3 +11,8 @@ wheels/
 .env
 *.venv
 *.env
+
+# Artifacts
+data/artifacts/
+data/redis*/
+models/served/

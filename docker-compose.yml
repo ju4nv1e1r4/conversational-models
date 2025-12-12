@@ -67,6 +67,17 @@ services:
       - "5540:5540"
     volumes:
       - ./redis/redisinsight/db:/db
+  
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: tracing
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - ai_net
 
 networks:
   ai_net:

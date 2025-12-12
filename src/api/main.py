@@ -1,10 +1,13 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+
 from src.services.llm_service import LLMService
 from src.services.redis_service import RedisService
 from src.services.intent_service import IntentService
+from src.utils.telemetry import telemetry
 
 app = FastAPI(title="Compound AI Orchestrator")
+telemetry.instrument_app(app)
 
 llm_service = LLMService()
 redis_service = RedisService()

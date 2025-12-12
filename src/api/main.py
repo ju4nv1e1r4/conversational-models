@@ -43,7 +43,6 @@ def chat(payload: ChatRequest):
         ai_response = llm_service.generate_response(
             prompt=context_prompt, 
             history=history,
-            system_instruction=system_instruction
         )
         
         # 5. Persistir

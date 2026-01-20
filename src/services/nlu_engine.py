@@ -54,6 +54,7 @@ class NLUEngine:
 
         sess_options = ort.SessionOptions()
         sess_options.intra_op_num_threads = 1 
+        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
         
         onnx_path = os.path.join(self.local_model_path, "model.onnx")
         self.session = ort.InferenceSession(onnx_path, sess_options)

@@ -30,6 +30,7 @@ services:
       - ./src:/app/src
       - ./models:/app/models
       - ./data:/app/data
+      - /app/data/artifacts
     env_file:
       - .env
     environment:

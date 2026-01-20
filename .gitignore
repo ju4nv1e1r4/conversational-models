@@ -16,3 +16,6 @@ wheels/
 data/artifacts/
 data/redis*/
 models/served/
+
+#os
+os

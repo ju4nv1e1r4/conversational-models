@@ -38,10 +38,12 @@ class NLUEngine:
         
         os.makedirs(self.local_model_path, exist_ok=True)
 
-        with zipfile.ZipFile(zip_local_path, 'r') as zip_ref:
-            zip_ref.extractall(self.local_model_path)
-
-        os.remove(zip_local_path)
+        try:
+            with zipfile.ZipFile(zip_local_path, 'r') as zip_ref:
+                zip_ref.extractall(self.local_model_path)
+        finally:
+            if os.path.exists(zip_local_path):
+                os.remove(zip_local_path)
 
     @instrument(name="load_model")
     def load(self):

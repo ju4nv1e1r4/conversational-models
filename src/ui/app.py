@@ -22,7 +22,7 @@ if prompt := st.chat_input("Diga algo para o Gemini 2.0..."):
         message_placeholder.markdown("Pensando...")
         
         try:
-            payload = {"message": prompt, "user_id": "demo_user"}
+            payload = {"message": prompt, "user_id": "default_user"}
             response = requests.post("http://app:8002/chat", json=payload)
             
             if response.status_code == 200:

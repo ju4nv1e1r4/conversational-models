@@ -10,7 +10,13 @@ class RedisService:
             decode_responses=True
         )
         self.ttl = 3600 # 1 hour on session
-        self.max_window = 10 # NOTE: context window size
+        self.max_window = 20
+
+    def get_data(self, key: str):
+        return self.client.get(key)
+
+    def set_data(self, key: str, data: any):
+        return self.client.set(key, data, ex=self.ttl)
 
     def add_message(self, user_id: str, role: str, content: str):
         """
@@ -32,5 +38,16 @@ class RedisService:
         
         return [json.loads(m) for m in messages_json]
     
-    def clear_history(self, user_id: str):
+    def clear_history(self, user_id: str) -> bool:
+        system_prompt_redis_key = f"llm:prompt:system_prompt:{user_id}"
+        context_prompt_redis_key = f"llm:prompt:context_prompt:{user_id}"
+        intent_redis_key = f"slm:prompt:intent:{user_id}"
+        payloads_redis_key = f"api:payloads:{user_id}"
+
         self.client.delete(f"session:{user_id}")
+        self.client.delete(system_prompt_redis_key)
+        self.client.delete(context_prompt_redis_key)
+        self.client.delete(intent_redis_key)
+        self.client.delete(payloads_redis_key)
+
+        return True

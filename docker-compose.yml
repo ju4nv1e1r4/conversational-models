@@ -1,7 +1,7 @@
 services:
   falkordb:
     image: falkordb/falkordb:latest
-    container_name: graph_db
+    container_name: falkordb
     ports:
       - "6379:6379"
     volumes:
@@ -11,7 +11,7 @@ services:
 
   redis_cache:
     image: redis:alpine
-    container_name: app_cache
+    container_name: redis_cache
     ports:
       - "6380:6379"
     volumes:
@@ -23,7 +23,7 @@ services:
     build:
       context: .
       dockerfile: docker/app/Dockerfile
-    container_name: orchestrator
+    container_name: app
     ports:
       - "8002:8002"
     volumes:
@@ -47,7 +47,7 @@ services:
     build:
       context: .
       dockerfile: docker/app/Dockerfile
-    container_name: ui
+    container_name: frontend
     ports:
       - "8501:8501"
     volumes:
@@ -71,7 +71,7 @@ services:
   
   jaeger:
     image: jaegertracing/all-in-one:latest
-    container_name: tracing
+    container_name: jaeger
     ports:
       - "16686:16686"
       - "4317:4317"
